@@ -104,6 +104,23 @@ def _changed(doc):
 	return False
 
 
+def _unique_project_name(name, project_id, existing):
+	"""A project_name ERPNext will accept.
+
+	ERPNext puts a unique index on project_name. Intacct does not — leadertread-DEV has two
+	projects both called "Internal Audit", under different PROJECTIDs, and the second one
+	failed the whole sync on a duplicate key.
+
+	The Intacct ID is appended only to the one that clashes, so the common case still reads
+	as the name a person typed in Intacct. Which of the two gets suffixed depends on read
+	order, which is stable (RECORDNO), so it does not move about between runs.
+	"""
+	taken = frappe.db.get_value("Project", {"project_name": name}, "name")
+	if not taken or taken == existing:
+		return name
+	return f"{name} ({project_id})"
+
+
 def _project_type(name):
 	"""Mirror an Intacct project type, creating it the first time it is seen.
 
@@ -142,7 +159,7 @@ def sync_projects(company=None):
 			doc = frappe.new_doc("Project")
 			created += 1
 
-		doc.project_name = val(row, "NAME") or project_id
+		doc.project_name = _unique_project_name(val(row, "NAME") or project_id, project_id, existing)
 		doc.company = company
 		doc.custom_intacct_project_id = project_id
 		doc.custom_intacct_recordno = val(row, "RECORDNO")
