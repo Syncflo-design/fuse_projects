@@ -1,4 +1,4 @@
-"""The Fuse Projects workspace.
+"""The Fuse Projects workspace, and the fields that hold a project's Intacct identity.
 
 Wired to after_install AND after_migrate, and exposed as fuse_projects.api.setup — on
 Frappe Cloud after_migrate has been observed not to fire, shipping code without the
@@ -15,8 +15,174 @@ sending a manufacturer into ERPNext's full Projects module to find four things.
 import json
 
 import frappe
+from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
 
 from fuse_projects.registry import MODULE_KEY
+
+# Custom fields rather than edits to ERPNext, so they survive an upgrade. They exist for
+# one reason: to hold the Intacct identity of a record, so the next sync finds it again
+# without guessing from the name — and so a movement can name a project Intacct will
+# accept. Re-applied on every migrate, because a field added in a later release is
+# otherwise never created on a site that already has the app.
+CUSTOM_FIELDS = {
+	"Project": [
+		{
+			"fieldname": "custom_intacct_section",
+			"fieldtype": "Section Break",
+			"label": "Intacct",
+			"insert_after": "project_name",
+			"collapsible": 1,
+		},
+		{
+			"fieldname": "custom_intacct_project_id",
+			"fieldtype": "Data",
+			"label": "Intacct Project ID",
+			"insert_after": "custom_intacct_section",
+			"read_only": 1,
+			"unique": 1,
+			"description": "Intacct PROJECTID. What a movement allocated to this project sends.",
+		},
+		{
+			"fieldname": "custom_intacct_recordno",
+			"fieldtype": "Data",
+			"label": "Intacct RECORDNO",
+			"insert_after": "custom_intacct_project_id",
+			"read_only": 1,
+			"description": "Immutable — survives the project being renamed in Intacct.",
+		},
+		{
+			"fieldname": "custom_intacct_project_status",
+			"fieldtype": "Data",
+			"label": "Intacct Project Status",
+			"insert_after": "custom_intacct_recordno",
+			"read_only": 1,
+			"description": "Intacct PROJECTSTATUS, verbatim. Client-defined, so it is shown rather than translated into an ERPNext status.",
+		},
+		{
+			"fieldname": "custom_intacct_customer_id",
+			"fieldtype": "Data",
+			"label": "Intacct Customer ID",
+			"insert_after": "custom_intacct_project_status",
+			"read_only": 1,
+			"description": "Recorded, not linked — customers are not mirrored from Intacct yet.",
+		},
+		{
+			"fieldname": "custom_intacct_parent_id",
+			"fieldtype": "Data",
+			"label": "Intacct Parent Project",
+			"insert_after": "custom_intacct_customer_id",
+			"read_only": 1,
+			"description": "PARENTID. ERPNext Projects are not a tree, so the hierarchy is recorded here rather than rebuilt.",
+		},
+	],
+	"Task": [
+		{
+			"fieldname": "custom_intacct_section",
+			"fieldtype": "Section Break",
+			"label": "Intacct",
+			"insert_after": "subject",
+			"collapsible": 1,
+		},
+		{
+			"fieldname": "custom_intacct_task_id",
+			"fieldtype": "Data",
+			"label": "Intacct Task ID",
+			"insert_after": "custom_intacct_section",
+			"read_only": 1,
+			"description": "Intacct TASKID. NOT unique on its own — it repeats across projects, so the pair with the project below is the key.",
+		},
+		{
+			"fieldname": "custom_intacct_project_id",
+			"fieldtype": "Data",
+			"label": "Intacct Project ID",
+			"insert_after": "custom_intacct_task_id",
+			"read_only": 1,
+		},
+		{
+			"fieldname": "custom_intacct_recordno",
+			"fieldtype": "Data",
+			"label": "Intacct RECORDNO",
+			"insert_after": "custom_intacct_project_id",
+			"read_only": 1,
+			"description": "Also what PARENTKEY points at on a child task. The key the progress write-back updates on — TASKID repeats across projects and is not one.",
+		},
+		{
+			"fieldname": "custom_intacct_pushed_on",
+			"fieldtype": "Datetime",
+			"label": "Progress Sent to Intacct",
+			"insert_after": "custom_intacct_recordno",
+			"read_only": 1,
+		},
+	],
+	# Time booked in the field. The key's presence is what stops a timesheet being sent
+	# twice — the same guard the stock postings use.
+	"Timesheet": [
+		{
+			"fieldname": "custom_intacct_section",
+			"fieldtype": "Section Break",
+			"label": "Intacct",
+			"insert_after": "employee_name",
+			"collapsible": 1,
+		},
+		{
+			"fieldname": "custom_intacct_key",
+			"fieldtype": "Data",
+			"label": "Intacct Key",
+			"insert_after": "custom_intacct_section",
+			"read_only": 1,
+			"allow_on_submit": 1,
+			"description": "Key of the Intacct timesheet this created. Its presence blocks a second send.",
+		},
+		{
+			"fieldname": "custom_intacct_posted_on",
+			"fieldtype": "Datetime",
+			"label": "Posted to Intacct",
+			"insert_after": "custom_intacct_key",
+			"read_only": 1,
+			"allow_on_submit": 1,
+		},
+	],
+	# Employees are NOT mirrored from Intacct, so this is a mapping someone makes once per
+	# person. Editable, unlike every other Intacct ID Fuse holds — there is no sync to
+	# overwrite it, and time cannot be booked without it.
+	"Employee": [
+		{
+			"fieldname": "custom_intacct_employee_id",
+			"fieldtype": "Data",
+			"label": "Intacct Employee ID",
+			"insert_after": "company",
+			"description": "EMPLOYEEID in Intacct. Time booked by this person is refused until it is set — the wrong employee's hours on a project is a billing error, not a typo, so it is never guessed from a name.",
+		},
+	],
+	# Intacct's "what kind of hour is this". A company that does not use time items leaves
+	# this empty and nothing is sent.
+	"Activity Type": [
+		{
+			"fieldname": "custom_intacct_item_id",
+			"fieldtype": "Data",
+			"label": "Intacct Time Item",
+			"insert_after": "activity_type",
+			"description": "ITEMID of the Intacct time item this activity books against, where the company uses them.",
+		},
+	],
+	"Intacct Settings": [
+		{
+			"fieldname": "post_project_updates",
+			"fieldtype": "Check",
+			"label": "Post Project Updates",
+			"insert_after": "post_movements",
+			"description": "Send task progress and booked time back to Intacct. Off by default: a site mirrors projects long before anyone decides ERPNext should be the thing that moves a task on. The task master stays Intacct's either way — Fuse never creates or deletes one.",
+		},
+		{
+			"fieldname": "projects_from_intacct",
+			"fieldtype": "Check",
+			"label": "Lock Project Creation in Fuse",
+			"default": "1",
+			"insert_after": "post_project_updates",
+			"description": "On: the New button is hidden on Projects and an insert is refused — the project sync is the only thing that may create one. A project invented here has no PROJECTID, so nothing booked against it could ever reach Intacct.\n\nOnly bites where the connection above is enabled. A site running Projects as an ERPNext-only module creates them as stock ERPNext does, whatever this says.",
+		},
+	],
+}
 
 WORKSPACE = "Fuse Projects"
 
@@ -52,6 +218,15 @@ SHORTCUTS = [
 		"type": "DocType",
 		"link_to": "Timesheet",
 		"color": "Grey",
+	},
+	{
+		# The phone screen. On the workspace as well as on Fuse Home, because the person who
+		# sets a crew up on it is at a desk, and they need to be able to show someone where
+		# it is.
+		"label": "Site Work",
+		"type": "Page",
+		"link_to": "fuse-projects-floor",
+		"color": "Green",
 	},
 ]
 
@@ -90,6 +265,7 @@ CONTENT = [
 	{"id": "fuse_pr_s2", "type": "shortcut", "data": {"shortcut_name": "Tasks", "col": 3}},
 	{"id": "fuse_pr_s3", "type": "shortcut", "data": {"shortcut_name": "Works Orders", "col": 3}},
 	{"id": "fuse_pr_s4", "type": "shortcut", "data": {"shortcut_name": "Timesheets", "col": 3}},
+	{"id": "fuse_pr_s5", "type": "shortcut", "data": {"shortcut_name": "Site Work", "col": 3}},
 	{"id": "fuse_pr_c1", "type": "card", "data": {"card_name": "Planning", "col": 4}},
 	{"id": "fuse_pr_c2", "type": "card", "data": {"card_name": "Doing", "col": 4}},
 	{"id": "fuse_pr_c3", "type": "card", "data": {"card_name": "Reports", "col": 4}},
@@ -147,13 +323,10 @@ def _sync_switch():
 	which is the difference between a client seeing the tile and being told to wait for a
 	deploy.
 
-	Silent when the integration app is absent: Projects must install on a site that has
-	no Intacct integration at all, and on such a site there is no table to seed.
+	Never fatal: the switches are a launcher preference, and a missing row costs an admin
+	one click. A failed install costs the whole release.
 	"""
-	try:
-		from fuse_manufacturing import modules
-	except ImportError:
-		return None
+	from fuse_core import modules
 
 	try:
 		modules.sync_modules()
@@ -170,6 +343,7 @@ def _sync_switch():
 
 def after_install():
 	"""Put this app's configuration in step with this version of it."""
+	create_custom_fields(CUSTOM_FIELDS, ignore_validate=True)
 	workspace = _build()
 	switch = _sync_switch()
 
@@ -180,4 +354,5 @@ def after_install():
 		"switch": switch,
 		"shortcuts": len(SHORTCUTS),
 		"links": len([link for link in LINKS if link["type"] == "Link"]),
+		"custom_fields": sum(len(fields) for fields in CUSTOM_FIELDS.values()),
 	}
