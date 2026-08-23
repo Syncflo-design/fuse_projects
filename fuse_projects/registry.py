@@ -49,6 +49,9 @@ def get_tiles():
 			# fault. It moves with them when the grid moves to an icon set.
 			"icon": "🗂",
 			"route": [ROUTE],
+			# Sits on the reference row with BOMs rather than in the run of actions. A
+			# project is what work is booked against, not a step in making something.
+			"group": "reference",
 			"roles": [
 				"Projects User",
 				"Projects Manager",
