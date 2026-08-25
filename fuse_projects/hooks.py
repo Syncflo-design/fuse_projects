@@ -30,6 +30,9 @@ after_migrate = "fuse_projects.install.after_install"
 fuse_modules = ["fuse_projects.registry.get_modules"]
 fuse_tiles = ["fuse_projects.registry.get_tiles"]
 
+# The guides this app ships. Merged with every other Fuse app's on the Training page.
+fuse_guides = ["fuse_projects.guides.get_guides"]
+
 # Daily. A project is opened, put on hold or closed deliberately, by a person — unlike the
 # item master, which moves all day. The job stands down silently when the Intacct connection
 # is not switched on, so a site running Projects as an ERPNext-only module does not log a

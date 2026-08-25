@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Projects — Fuse</title>
+<style>
+:root {
+	--ink: #14202a;
+	--soft: #55636e;
+	--faint: #8a949d;
+	--rule: #e3e7ea;
+	--ground: #ffffff;
+	--panel: #f6f8f9;
+	--accent: #1a7a4c;
+	--accent-soft: #e8f3ed;
+}
+@media (prefers-color-scheme: dark) {
+	:root {
+		--ink: #e8edf1;
+		--soft: #a9b4bd;
+		--faint: #7c868f;
+		--rule: #2b3640;
+		--ground: #141a20;
+		--panel: #1b232b;
+		--accent: #4cc088;
+		--accent-soft: #16302380;
+	}
+}
+* { box-sizing: border-box; }
+body {
+	margin: 0;
+	padding: 0 24px 96px;
+	background: var(--ground);
+	color: var(--ink);
+	font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+	-webkit-font-smoothing: antialiased;
+}
+main { max-width: 46rem; margin: 0 auto; }
+header.guide {
+	max-width: 46rem;
+	margin: 0 auto;
+	padding: 40px 0 20px;
+	border-bottom: 2px solid var(--ink);
+}
+header.guide .eyebrow {
+	font-size: 12px;
+	font-weight: 700;
+	letter-spacing: .14em;
+	text-transform: uppercase;
+	color: var(--accent);
+	margin: 0 0 6px;
+}
+header.guide h1 { font-size: 2rem; line-height: 1.15; margin: 0; text-wrap: balance; }
+header.guide .standfirst { color: var(--soft); margin: 8px 0 0; }
+h2 {
+	font-size: 1.25rem;
+	margin: 2.4rem 0 .6rem;
+	padding-top: 1.4rem;
+	border-top: 1px solid var(--rule);
+	text-wrap: balance;
+}
+h3 { font-size: 1.02rem; margin: 1.6rem 0 .4rem; text-wrap: balance; }
+p, li { color: var(--soft); }
+li { margin: .25rem 0; }
+strong { color: var(--ink); font-weight: 600; }
+ol, ul { padding-left: 1.3rem; }
+code {
+	background: var(--panel);
+	border: 1px solid var(--rule);
+	border-radius: 4px;
+	padding: .08em .35em;
+	font-size: .88em;
+	color: var(--ink);
+}
+.table-scroll { overflow-x: auto; margin: 1rem 0; }
+table { border-collapse: collapse; width: 100%; font-size: .93rem; }
+th, td {
+	text-align: left;
+	padding: .5rem .7rem;
+	border-bottom: 1px solid var(--rule);
+	vertical-align: top;
+	color: var(--soft);
+}
+th { color: var(--ink); font-weight: 600; background: var(--panel); }
+blockquote {
+	margin: 1.2rem 0;
+	padding: .7rem 1rem;
+	border-left: 3px solid var(--accent);
+	background: var(--accent-soft);
+	border-radius: 0 6px 6px 0;
+}
+blockquote p { margin: .3rem 0; }
+figure.shot {
+	margin: 1.4rem 0;
+	padding: 1.6rem 1rem;
+	border: 1px dashed var(--rule);
+	border-radius: 8px;
+	background: var(--panel);
+	text-align: center;
+}
+figure.shot .label {
+	display: block;
+	font-size: 12px;
+	font-weight: 700;
+	letter-spacing: .1em;
+	text-transform: uppercase;
+	color: var(--accent);
+}
+figure.shot .what { display: block; margin-top: .3rem; color: var(--faint); font-size: .9rem; }
+footer.guide {
+	max-width: 46rem;
+	margin: 3rem auto 0;
+	padding-top: 1rem;
+	border-top: 1px solid var(--rule);
+	color: var(--faint);
+	font-size: .85rem;
+}
+@media print {
+	body { padding: 0; }
+	figure.shot { break-inside: avoid; }
+	h2 { break-after: avoid; }
+}
+</style>
+</head>
+<body>
+<header class="guide">
+	<p class="eyebrow">Fuse user guide 01</p>
+	<h1>Projects</h1>
+	<p class="standfirst">Jobs, tasks and what they have cost — Fuse Projects user guide 01</p>
+</header>
+<main>
+<h2>Before you start</h2>
+<h3>What Projects is for</h3>
+<p>Not everything a business does is a production run. Some work is a job: an installation, a
+commissioning, a service call, a build on a customer's site. It has a start and an end,
+people book time to it, and somebody wants to know at the end what it cost.</p>
+<p>That is what Projects records.</p>
+<h3>Where projects come from</h3>
+<p><strong>From Intacct.</strong> Projects and their tasks are raised in Intacct and mirrored here, so
+that the people doing the work see the same job list as the people costing it.</p>
+<p>On a site set up that way, the New button on Projects is hidden and creating one here is
+refused. A project invented in Fuse would be one Intacct has never heard of, and the time
+booked to it would have nowhere to go.</p>
+<p>Two switches in Intacct Settings control this:</p>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>Switch</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Projects from Intacct</td>
+<td>Projects and tasks are mirrored, and creating them here is locked</td>
+</tr>
+<tr>
+<td>Post project updates</td>
+<td>Task status changes and timesheets are sent back to Intacct</td>
+</tr>
+</tbody>
+</table></div>
+<figure class="shot"><span class="label">Screenshot 1</span><span class="what">Fuse Home, reference row, Projects tile</span></figure>
+<h2>The Projects page</h2>
+<p>Click <strong>Projects</strong> on Fuse Home.</p>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>What you see</th>
+<th>What it tells you</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Project</td>
+<td>The job, as Intacct knows it</td>
+</tr>
+<tr>
+<td>Status</td>
+<td>Open, Completed, or Cancelled</td>
+</tr>
+<tr>
+<td>Tasks</td>
+<td>The pieces of work that make it up</td>
+</tr>
+<tr>
+<td>Cost</td>
+<td>What has been booked against it so far</td>
+</tr>
+</tbody>
+</table></div>
+<p>Open a project to see its task list. A task is the unit people actually book against — one
+job may have three tasks or thirty.</p>
+<figure class="shot"><span class="label">Screenshot 2</span><span class="what">Project form showing the task list</span></figure>
+<h2>Working a job</h2>
+<h3>Marking a task</h3>
+<ol>
+<li>Open the task.</li>
+<li>Set the <strong>Status</strong> — Open, Working, Pending Review, Completed, or Cancelled.</li>
+<li>Save.</li>
+</ol>
+<p>Where <strong>Post project updates</strong> is on, the change is sent to Intacct as you save it. The
+people costing the job see the same status as the people doing it, without anybody sending
+a message.</p>
+<h3>Booking time</h3>
+<ol>
+<li>Open the task, or go to Timesheet.</li>
+<li>Add a row: the employee, the activity type, the hours, and the task.</li>
+<li>Submit.</li>
+</ol>
+<p>On submit the timesheet is posted to Intacct against the same project and task. That is
+what makes the cost on the project real rather than an estimate.</p>
+<figure class="shot"><span class="label">Screenshot 3</span><span class="what">Timesheet with one row against a project task</span></figure>
+<h2>On a phone or tablet</h2>
+<p>The <strong>Site Work</strong> screen is built for someone standing on a job rather than sitting at a
+desk. It shows the tasks assigned to them, lets them change a status with one tap, and
+lets them log time without opening a form.</p>
+<p>Reach it from Shop floor screens on Fuse Home, or bookmark it directly.</p>
+<figure class="shot"><span class="label">Screenshot 4</span><span class="what">fuse-projects-floor page on a phone-width screen</span></figure>
+<h2>Common questions</h2>
+<h3>A project I expect is not here</h3>
+<p>It is not open in Intacct, or the sync has not run since it was raised. Check Intacct
+first; then re-run the project sync from Intacct Settings.</p>
+<h3>The New button is missing</h3>
+<p>The site is set up with Intacct as the source for projects. Raise it there and it appears
+here on the next sync.</p>
+<h3>Can I add a task to an existing project?</h3>
+<p>Yes, where the site allows it — a new task is created here and pushed to Intacct, so both
+sides stay in step. A whole new project is not, for the reason above.</p>
+<h3>The cost looks too low</h3>
+<p>Time booked but not submitted does not count. Check for draft timesheets. Cost from
+materials and purchases comes from Intacct, so a job costed only on labour here is usually
+a job whose purchases have not been posted there yet.</p>
+</main>
+<footer class="guide">Fuse Manufacturing — Syncflo. Printed from the Guides page.</footer>
+</body>
+</html>
