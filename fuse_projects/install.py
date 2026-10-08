@@ -7,9 +7,11 @@ configuration that goes with it. Everything here is idempotent.
 The workspace is built from this file rather than shipped as a JSON fixture so that a
 hand-edit on one client's site cannot quietly persist and make two clients differ.
 
-Every link points at something ERPNext already ships. This app adds no doctypes and no
-reports: the value is the arrangement — one Fuse-shaped page over Projects, instead of
-sending a manufacturer into ERPNext's full Projects module to find four things.
+Most links point at something ERPNext already ships: the value is the arrangement — one
+Fuse-shaped page over Projects, instead of sending a manufacturer into ERPNext's full
+Projects module to find four things. The Commercial card is this app's own: BOQ,
+subcontract certificates, client valuations and the project cost report, for a contractor
+who prices, buys, certifies and values work against Intacct projects.
 """
 
 import json
@@ -181,6 +183,67 @@ CUSTOM_FIELDS = {
 			"insert_after": "post_project_updates",
 			"description": "On: the New button is hidden on Projects and an insert is refused — the project sync is the only thing that may create one. A project invented here has no PROJECTID, so nothing booked against it could ever reach Intacct.\n\nOnly bites where the connection above is enabled. A site running Projects as an ERPNext-only module creates them as stock ERPNext does, whatever this says.",
 		},
+		# Where subcontract certificates and client valuations post. Intacct account
+		# numbers, typed once per company — the chart is Intacct's, so nothing is guessed.
+		{
+			"fieldname": "construction_section",
+			"fieldtype": "Section Break",
+			"label": "Construction Postings",
+			"insert_after": "projects_from_intacct",
+			"collapsible": 1,
+		},
+		{
+			"fieldname": "construction_cost_account",
+			"fieldtype": "Data",
+			"label": "Subcontract Cost Account",
+			"insert_after": "construction_section",
+			"description": "Intacct GL account a subcontract certificate's gross, and any contra-charge, posts to — always with the project.",
+		},
+		{
+			"fieldname": "retention_payable_account",
+			"fieldtype": "Data",
+			"label": "Retention Payable Account",
+			"insert_after": "construction_cost_account",
+			"description": "Liability the retention held on a subcontractor posts to. Released later by a certificate like any other.",
+		},
+		{
+			"fieldname": "construction_due_days",
+			"fieldtype": "Int",
+			"label": "Days to Pay",
+			"default": "30",
+			"insert_after": "retention_payable_account",
+			"description": "Due date on bills and invoices, counted from the certificate or valuation date.",
+		},
+		{
+			"fieldname": "construction_column",
+			"fieldtype": "Column Break",
+			"insert_after": "construction_due_days",
+		},
+		{
+			"fieldname": "revenue_account",
+			"fieldtype": "Data",
+			"label": "Valuation Revenue Account",
+			"insert_after": "construction_column",
+			"description": "Intacct GL account a client valuation's gross posts to, with the project.",
+		},
+		{
+			"fieldname": "retention_receivable_account",
+			"fieldtype": "Data",
+			"label": "Retention Receivable Account",
+			"insert_after": "revenue_account",
+			"description": "Asset the retention a client holds back posts to — held, not invoiced.",
+		},
+	],
+	# The BOQ section a purchase order line is bought for. The project alone says which job;
+	# the section is what the cost report sets the commitment against.
+	"Purchase Order Item": [
+		{
+			"fieldname": "custom_boq_task",
+			"fieldtype": "Link",
+			"label": "BOQ Section",
+			"options": "Task",
+			"insert_after": "project",
+		},
 	],
 }
 
@@ -228,6 +291,24 @@ SHORTCUTS = [
 		"link_to": "fuse-projects-floor",
 		"color": "Green",
 	},
+	{
+		"label": "BOQs",
+		"type": "DocType",
+		"link_to": "Fuse BOQ",
+		"color": "Green",
+	},
+	{
+		"label": "Certificates",
+		"type": "DocType",
+		"link_to": "Fuse Subcontract Certificate",
+		"color": "Orange",
+	},
+	{
+		"label": "Valuations",
+		"type": "DocType",
+		"link_to": "Fuse Client Valuation",
+		"color": "Blue",
+	},
 ]
 
 # Card Break rows open a card; the Link rows after one belong to it.
@@ -253,6 +334,14 @@ LINKS = [
 	 "link_to": "Delayed Tasks Summary", "is_query_report": 1},
 	{"type": "Link", "label": "Daily Timesheet Summary", "link_type": "Report",
 	 "link_to": "Daily Timesheet Summary", "is_query_report": 1},
+	{"type": "Card Break", "label": "Commercial"},
+	{"type": "Link", "label": "Bill of Quantities", "link_type": "DocType", "link_to": "Fuse BOQ"},
+	{"type": "Link", "label": "Subcontract Certificate", "link_type": "DocType",
+	 "link_to": "Fuse Subcontract Certificate"},
+	{"type": "Link", "label": "Client Valuation", "link_type": "DocType", "link_to": "Fuse Client Valuation"},
+	{"type": "Link", "label": "Purchase Order", "link_type": "DocType", "link_to": "Purchase Order"},
+	{"type": "Link", "label": "Project Cost Report", "link_type": "Report", "link_to": "Project Cost Report",
+	 "is_query_report": 1},
 ]
 
 # Every `shortcut_name` must match a SHORTCUTS label and every `card_name` a Card Break
@@ -266,6 +355,10 @@ CONTENT = [
 	{"id": "fuse_pr_s3", "type": "shortcut", "data": {"shortcut_name": "Works Orders", "col": 3}},
 	{"id": "fuse_pr_s4", "type": "shortcut", "data": {"shortcut_name": "Timesheets", "col": 3}},
 	{"id": "fuse_pr_s5", "type": "shortcut", "data": {"shortcut_name": "Site Work", "col": 3}},
+	{"id": "fuse_pr_s6", "type": "shortcut", "data": {"shortcut_name": "BOQs", "col": 3}},
+	{"id": "fuse_pr_s7", "type": "shortcut", "data": {"shortcut_name": "Certificates", "col": 3}},
+	{"id": "fuse_pr_s8", "type": "shortcut", "data": {"shortcut_name": "Valuations", "col": 3}},
+	{"id": "fuse_pr_c4", "type": "card", "data": {"card_name": "Commercial", "col": 4}},
 	{"id": "fuse_pr_c1", "type": "card", "data": {"card_name": "Planning", "col": 4}},
 	{"id": "fuse_pr_c2", "type": "card", "data": {"card_name": "Doing", "col": 4}},
 	{"id": "fuse_pr_c3", "type": "card", "data": {"card_name": "Reports", "col": 4}},
