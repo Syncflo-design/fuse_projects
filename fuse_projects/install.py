@@ -11,7 +11,7 @@ Most links point at something ERPNext already ships: the value is the arrangemen
 Fuse-shaped page over Projects, instead of sending a manufacturer into ERPNext's full
 Projects module to find four things. The Commercial card is this app's own: BOQ,
 subcontract certificates, client valuations and the project cost report, for a contractor
-who prices, buys, certifies and values work against Intacct projects.
+who prices, buys, certifies and values work. Those stay in Fuse.
 """
 
 import json
@@ -183,56 +183,6 @@ CUSTOM_FIELDS = {
 			"insert_after": "post_project_updates",
 			"description": "On: the New button is hidden on Projects and an insert is refused — the project sync is the only thing that may create one. A project invented here has no PROJECTID, so nothing booked against it could ever reach Intacct.\n\nOnly bites where the connection above is enabled. A site running Projects as an ERPNext-only module creates them as stock ERPNext does, whatever this says.",
 		},
-		# Where subcontract certificates and client valuations post. Intacct account
-		# numbers, typed once per company — the chart is Intacct's, so nothing is guessed.
-		{
-			"fieldname": "construction_section",
-			"fieldtype": "Section Break",
-			"label": "Construction Postings",
-			"insert_after": "projects_from_intacct",
-			"collapsible": 1,
-		},
-		{
-			"fieldname": "construction_cost_account",
-			"fieldtype": "Data",
-			"label": "Subcontract Cost Account",
-			"insert_after": "construction_section",
-			"description": "Intacct GL account a subcontract certificate's gross, and any contra-charge, posts to — always with the project.",
-		},
-		{
-			"fieldname": "retention_payable_account",
-			"fieldtype": "Data",
-			"label": "Retention Payable Account",
-			"insert_after": "construction_cost_account",
-			"description": "Liability the retention held on a subcontractor posts to. Released later by a certificate like any other.",
-		},
-		{
-			"fieldname": "construction_due_days",
-			"fieldtype": "Int",
-			"label": "Days to Pay",
-			"default": "30",
-			"insert_after": "retention_payable_account",
-			"description": "Due date on bills and invoices, counted from the certificate or valuation date.",
-		},
-		{
-			"fieldname": "construction_column",
-			"fieldtype": "Column Break",
-			"insert_after": "construction_due_days",
-		},
-		{
-			"fieldname": "revenue_account",
-			"fieldtype": "Data",
-			"label": "Valuation Revenue Account",
-			"insert_after": "construction_column",
-			"description": "Intacct GL account a client valuation's gross posts to, with the project.",
-		},
-		{
-			"fieldname": "retention_receivable_account",
-			"fieldtype": "Data",
-			"label": "Retention Receivable Account",
-			"insert_after": "revenue_account",
-			"description": "Asset the retention a client holds back posts to — held, not invoiced.",
-		},
 	],
 	# The BOQ section a purchase order line is bought for. The project alone says which job;
 	# the section is what the cost report sets the commitment against.
@@ -244,6 +194,21 @@ CUSTOM_FIELDS = {
 			"options": "Task",
 			"insert_after": "project",
 		},
+	],
+}
+
+# Shipped in 0.2.0 for posting construction documents to Intacct, which was dropped: BOQs,
+# certificates and valuations stay in Fuse. Removed so Intacct Settings does not offer
+# accounts nothing uses.
+RETIRED_FIELDS = {
+	"Intacct Settings": [
+		"construction_section",
+		"construction_cost_account",
+		"retention_payable_account",
+		"construction_due_days",
+		"construction_column",
+		"revenue_account",
+		"retention_receivable_account",
 	],
 }
 
@@ -434,8 +399,17 @@ def _sync_switch():
 	return MODULE_KEY
 
 
+def _drop_retired_fields():
+	for doctype, fieldnames in RETIRED_FIELDS.items():
+		for fieldname in fieldnames:
+			name = frappe.db.get_value("Custom Field", {"dt": doctype, "fieldname": fieldname})
+			if name:
+				frappe.delete_doc("Custom Field", name, ignore_permissions=True, force=True)
+
+
 def after_install():
 	"""Put this app's configuration in step with this version of it."""
+	_drop_retired_fields()
 	create_custom_fields(CUSTOM_FIELDS, ignore_validate=True)
 	workspace = _build()
 	switch = _sync_switch()

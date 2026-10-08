@@ -10,27 +10,6 @@ frappe.ui.form.on("Fuse Client Valuation", {
 		if (frm.is_new() && frm.doc.boq && !(frm.doc.lines || []).length) frm.trigger("boq");
 	},
 
-	refresh(frm) {
-		if (frm.doc.docstatus === 1 && frm.doc.intacct_key) {
-			frm.dashboard.set_headline(
-				__("Posted to Intacct as AR invoice {0}.", [frappe.utils.escape_html(frm.doc.intacct_key)])
-			);
-		}
-		if (frm.doc.docstatus === 0 && !frm.is_new() && frappe.user.has_role("System Manager")) {
-			frm.add_custom_button(__("Preview Intacct Invoice"), () =>
-				frappe.call({
-					method: "fuse_projects.commercial.preview_posting",
-					args: { doctype: frm.doctype, name: frm.doc.name },
-					callback(r) {
-						if (r.message) {
-							frappe.msgprint({ title: __("What Intacct will receive"), message: `<pre>${frappe.utils.escape_html(r.message)}</pre>`, wide: true });
-						}
-					},
-				})
-			);
-		}
-	},
-
 	boq(frm) {
 		if (!frm.doc.boq) return;
 		frappe.call({

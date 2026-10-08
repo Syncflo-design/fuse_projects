@@ -42,18 +42,17 @@ class FuseClientValuation(Document):
 			frappe.throw("Nothing new to value since the last valuation.")
 
 	def on_submit(self):
-		# Intacct first. A rejection raises, and the submit rolls back with it.
-		commercial.post_valuation(self)
+		# Progress lands on the task — the same figure the site team sees on the phone screen,
+		# and the one the cost report earns value against.
+		self._set_progress({line.task: flt(line.percent_complete) for line in self.lines})
 
-		# Progress lands on the task too — the same figure the site team sees on the phone
-		# screen, and the one the cost report earns value against.
-		for line in self.lines:
-			if line.task:
-				frappe.db.set_value("Task", line.task, "progress", flt(line.percent_complete), update_modified=False)
+	def on_cancel(self):
+		# Back to where the valuation before this one left each section.
+		last = commercial.previous_valuation(self.boq, exclude=self.name)
+		before = {line.task: flt(line.percent_complete) for line in (last.lines if last else [])}
+		self._set_progress({line.task: before.get(line.task, 0) for line in self.lines})
 
-	def before_cancel(self):
-		if self.intacct_key:
-			frappe.throw(
-				f"This valuation is Intacct invoice {self.intacct_key}. A superseded valuation is a "
-				"credit and a re-issue in Intacct, not a cancellation here."
-			)
+	def _set_progress(self, percents):
+		for task, percent in percents.items():
+			if task:
+				frappe.db.set_value("Task", task, "progress", percent, update_modified=False)

@@ -2,8 +2,6 @@ import frappe
 from frappe.model.document import Document
 from frappe.utils import flt
 
-from fuse_projects import commercial
-
 
 class FuseSubcontractCertificate(Document):
 	def validate(self):
@@ -21,14 +19,3 @@ class FuseSubcontractCertificate(Document):
 		self.net_payable = flt(flt(self.gross_value) - self.retention_amount - flt(self.contra_charges), 2)
 		if self.net_payable <= 0:
 			frappe.throw("Retention and contra-charges take this certificate to nothing payable.")
-
-	def on_submit(self):
-		# Intacct first. A rejection raises, and the submit rolls back with it.
-		commercial.post_certificate(self)
-
-	def before_cancel(self):
-		if self.intacct_key:
-			frappe.throw(
-				f"This certificate is Intacct bill {self.intacct_key}. Reverse the bill in Intacct; "
-				"a revision posts as a new certificate."
-			)

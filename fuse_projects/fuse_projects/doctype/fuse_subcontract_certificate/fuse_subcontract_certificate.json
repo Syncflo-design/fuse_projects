@@ -1,7 +1,7 @@
 {
  "actions": [],
  "allow_rename": 0,
- "creation": "2026-10-08 15:00:00.000000",
+ "creation": "2026-10-08 17:30:00.000000",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
@@ -22,11 +22,7 @@
   "retention_percent",
   "retention_amount",
   "net_payable",
-  "description",
-  "intacct_section",
-  "intacct_key",
-  "column_break_intacct",
-  "intacct_posted_on"
+  "description"
  ],
  "fields": [
   {
@@ -60,8 +56,7 @@
    "options": "Supplier",
    "reqd": 1,
    "in_list_view": 1,
-   "in_standard_filter": 1,
-   "description": "Comes from Intacct. Billed under its Intacct vendor ID."
+   "in_standard_filter": 1
   },
   {
    "fieldname": "column_break_head",
@@ -73,7 +68,7 @@
    "label": "Certificate No.",
    "reqd": 1,
    "in_list_view": 1,
-   "description": "Becomes the bill number in Intacct."
+   "description": "The subcontractor's certificate number."
   },
   {
    "fieldname": "posting_date",
@@ -146,37 +141,11 @@
    "fieldname": "description",
    "fieldtype": "Small Text",
    "label": "Notes"
-  },
-  {
-   "fieldname": "intacct_section",
-   "fieldtype": "Section Break",
-   "label": "Recorded in Intacct",
-   "collapsible": 1
-  },
-  {
-   "fieldname": "intacct_key",
-   "fieldtype": "Data",
-   "label": "Intacct Bill Key",
-   "read_only": 1,
-   "allow_on_submit": 1,
-   "no_copy": 1
-  },
-  {
-   "fieldname": "column_break_intacct",
-   "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "intacct_posted_on",
-   "fieldtype": "Datetime",
-   "label": "Posted to Intacct",
-   "read_only": 1,
-   "allow_on_submit": 1,
-   "no_copy": 1
   }
  ],
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-10-08 15:00:00.000000",
+ "modified": "2026-10-08 17:30:00.000000",
  "modified_by": "Administrator",
  "module": "Fuse Projects",
  "name": "Fuse Subcontract Certificate",
@@ -253,6 +222,6 @@
  "is_submittable": 1,
  "autoname": "format:SC-{#####}",
  "naming_rule": "Expression",
- "description": "A subcontractor's monthly certificate. Submitting it posts an AP bill to Intacct: gross to the project, contra-charges back against it, retention to the retention payable account.",
+ "description": "A subcontractor's monthly certificate: work certified, retention held, contra-charges recovered, net payable.",
  "search_fields": "subcontractor,certificate_no,project"
 }

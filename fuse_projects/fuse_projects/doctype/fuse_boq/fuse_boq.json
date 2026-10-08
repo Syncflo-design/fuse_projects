@@ -1,7 +1,7 @@
 {
  "actions": [],
  "allow_rename": 0,
- "creation": "2026-10-08 15:00:00.000000",
+ "creation": "2026-10-08 17:30:00.000000",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
@@ -24,9 +24,7 @@
   "client_retention_percent",
   "column_break_totals",
   "total_cost",
-  "contract_value",
-  "intacct_section",
-  "intacct_project_recordno"
+  "contract_value"
  ],
  "fields": [
   {
@@ -40,11 +38,11 @@
   {
    "fieldname": "project_key",
    "fieldtype": "Data",
-   "label": "Intacct Project ID",
+   "label": "Project Code",
    "reqd": 1,
    "in_list_view": 1,
    "length": 20,
-   "description": "The one key every system uses for this job. Set once, here, and never re-keyed — Intacct receives it on award."
+   "description": "The job's code. Set once, here, and never re-keyed."
   },
   {
    "fieldname": "contract_model",
@@ -67,7 +65,7 @@
    "options": "Customer",
    "depends_on": "eval:doc.contract_model=='EPC'",
    "mandatory_depends_on": "eval:doc.contract_model=='EPC'",
-   "description": "Comes from Intacct. Valuations are invoiced to this customer."
+   "description": "Valuations are made to this client."
   },
   {
    "fieldname": "start_date",
@@ -164,24 +162,11 @@
    "read_only": 1,
    "bold": 1,
    "in_list_view": 1
-  },
-  {
-   "fieldname": "intacct_section",
-   "fieldtype": "Section Break",
-   "label": "Intacct",
-   "collapsible": 1
-  },
-  {
-   "fieldname": "intacct_project_recordno",
-   "fieldtype": "Data",
-   "label": "Intacct Project RECORDNO",
-   "read_only": 1,
-   "no_copy": 1
   }
  ],
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-10-08 15:00:00.000000",
+ "modified": "2026-10-08 17:30:00.000000",
  "modified_by": "Administrator",
  "module": "Fuse Projects",
  "name": "Fuse BOQ",
@@ -246,6 +231,6 @@
  "naming_rule": "Expression",
  "title_field": "title",
  "show_title_field_in_link": 1,
- "description": "A priced bill of quantities. Awarding it opens the project in Intacct with one task per section and the BOQ total as the projected cost.",
+ "description": "A priced bill of quantities. Awarding it opens the project with one task per section, and the BOQ becomes its budget.",
  "search_fields": "title,project_key"
 }

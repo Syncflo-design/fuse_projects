@@ -1,36 +1,25 @@
-"""The NSE Energy demo profile: one 5 MW PV plant, ready to award.
+"""The NSE Energy demo profile: one 5 MW PV plant, awarded and ready to run.
 
 Demo setup, not product. Run once on the Fuse demo site, from the BOQ list (menu: Load NSE
 Demo), after the outgoing profile has been backed up. It is idempotent — a second run finds
 what the first made and adds only what is missing.
 
-What it does:
-  * names the Intacct accounts certificates and valuations post to (leadertread-DEV's
-    Retainage Payable / Receivable, COGS Services and Revenue - Other);
-  * switches off the manufacturing tiles, so Fuse Home reads as a contractor's;
-  * opens the subcontractor, the two material suppliers and the EPC client in Intacct —
-    vendors and customers are Intacct's, so they are created there and mirrored here;
-  * adds two purchasable items (modules, inverters) for the purchase orders;
-  * prices the BOQ: six sections, fourteen lines, one with a rate build-up.
+Everything stays in Fuse. Nothing is read from or written to Intacct.
 
-Nothing is awarded, certified or valued. Those are the demo.
+What it does:
+  * switches off the manufacturing tiles, so Fuse Home reads as a contractor's;
+  * adds the subcontractor, the two material suppliers and the EPC client;
+  * adds two purchasable items (modules, inverters) for the purchase orders;
+  * prices the BOQ — six sections, fourteen lines, one with a rate build-up — and awards it,
+    which opens the project with a task per section.
+
+Nothing is bought, certified or valued. Those are the demo.
 """
 
 import frappe
 from frappe.utils import add_months, nowdate
-from fuse_core import gateway
-from fuse_core.gateway import val
 
 from fuse_projects import commercial
-
-# leadertread-DEV's chart. All four exist and need no department or location.
-ACCOUNTS = {
-	"construction_cost_account": "50300",  # COGS Services
-	"retention_payable_account": "20191",  # Retainage Payable
-	"revenue_account": "40900",  # Revenue - Other
-	"retention_receivable_account": "10191",  # Retainage Receivable
-	"construction_due_days": 30,
-}
 
 # A contractor's Fuse Home: projects, buying, receiving, stores and the phone screens.
 MODULES_OFF = (
@@ -45,12 +34,12 @@ MODULES_OFF = (
 	"bin_transfer",
 )
 
-SUBCONTRACTOR = ("NSE-V-CIVILS", "Karoo Civils (Pty) Ltd")
 SUPPLIERS = [
-	("NSE-V-MODULES", "Helios PV Supply (Pty) Ltd"),
-	("NSE-V-INVERTERS", "Cape Inverter Systems (Pty) Ltd"),
+	"Karoo Civils (Pty) Ltd",
+	"Helios PV Supply (Pty) Ltd",
+	"Cape Inverter Systems (Pty) Ltd",
 ]
-CLIENT = ("NSE-C-OVERBERG", "Overberg Solar One (RF) Pty Ltd")
+CLIENT = "Overberg Solar One (RF) Pty Ltd"
 
 ITEMS = [
 	("NSE-PV-550", "PV module 550 Wp, bifacial"),
@@ -87,31 +76,26 @@ def load(project_key="NSE-DEMO-5MW"):
 	from fuse_projects.install import after_install
 
 	after_install()
-	_settings()
-	vendor_ids = {
-		name: _ensure_party("VENDOR", "Supplier", vendor_id, name)
-		for vendor_id, name in [SUBCONTRACTOR, *SUPPLIERS]
-	}
-	customer_id = _ensure_party("CUSTOMER", "Customer", *CLIENT)
+	_switch_off_manufacturing()
+	for name in SUPPLIERS:
+		_ensure_party("Supplier", name)
+	_ensure_party("Customer", CLIENT)
 	items = [_ensure_item(code, name) for code, name in ITEMS]
 	boq = _ensure_boq(project_key)
+	if frappe.db.get_value("Fuse BOQ", boq, "status") == "Draft":
+		commercial.award_boq(boq)
+	project = frappe.db.get_value("Fuse BOQ", boq, "project")
 
 	frappe.db.commit()
 	summary = (
-		f"BOQ <b>{boq}</b> priced for project key <b>{frappe.utils.escape_html(project_key)}</b>.<br>"
-		f"In Intacct: {', '.join(f'{name} ({vid})' for name, vid in vendor_ids.items())}; "
-		f"client {CLIENT[1]} ({customer_id}).<br>"
+		f"BOQ <b>{boq}</b> awarded as project <b>{project}</b>, one task per section.<br>"
+		f"Subcontractor and suppliers: {', '.join(SUPPLIERS)}. Client: {CLIENT}.<br>"
 		f"Items: {', '.join(items)}. Manufacturing tiles switched off."
 	)
 	return {"boq": boq, "summary": summary}
 
 
-def _settings():
-	"""Posting accounts, and a contractor's set of tiles."""
-	for field, value in ACCOUNTS.items():
-		if not frappe.db.get_single_value("Intacct Settings", field):
-			frappe.db.set_single_value("Intacct Settings", field, value)
-
+def _switch_off_manufacturing():
 	for key in MODULES_OFF:
 		frappe.db.set_value(
 			"Fuse Active Module",
@@ -122,47 +106,7 @@ def _settings():
 	frappe.clear_document_cache("Intacct Settings", "Intacct Settings")
 
 
-def _ensure_party(object_name, doctype, preferred_id, name):
-	"""An Intacct vendor or customer, opened there if missing and mirrored here.
-
-	Found by name first, so a second run never makes a second one. Created with the ID
-	given, or — where Intacct numbers them itself and refuses an ID it did not issue —
-	without one, and the number it chose is read back.
-	"""
-	id_field = "VENDORID" if object_name == "VENDOR" else "CUSTOMERID"
-	local_field = "custom_intacct_vendor_id" if doctype == "Supplier" else "custom_intacct_customer_id"
-	fields = ["RECORDNO", id_field, "NAME"]
-
-	local = _ensure_local_party(doctype, name)
-	created = frappe.db.get_value(doctype, local, "creation")
-
-	row = commercial.find_one(object_name, fields, "NAME", name)
-	if row is None:
-		keys = commercial.post_first_accepted(
-			[
-				(f"demo_party:{created}", lambda: [commercial.create_function(object_name, {id_field: preferred_id, "NAME": name})]),
-				(f"demo_party_numbered:{created}", lambda: [commercial.create_function(object_name, {"NAME": name})]),
-			],
-			(doctype, local),
-		)
-		if keys and keys[0]:
-			row = commercial.find_one(object_name, fields, "RECORDNO", keys[0])
-		if row is None:
-			row = commercial.find_one(object_name, fields, "NAME", name)
-		if row is None:
-			frappe.throw(f"Intacct accepted {name} but it could not be read back.")
-
-	intacct_id = val(row, id_field)
-	frappe.db.set_value(
-		doctype,
-		local,
-		{local_field: intacct_id, "custom_intacct_recordno": val(row, "RECORDNO")},
-		update_modified=False,
-	)
-	return intacct_id
-
-
-def _ensure_local_party(doctype, name):
+def _ensure_party(doctype, name):
 	existing = frappe.db.get_value(doctype, {f"{doctype.lower()}_name": name}, "name")
 	if existing:
 		return existing
@@ -183,9 +127,9 @@ def _ensure_local_party(doctype, name):
 def _ensure_item(code, name):
 	if frappe.db.exists("Item", code):
 		return code
-	group = gateway.settings().get("default_item_group") or "Products"
-	if not frappe.db.exists("Item Group", group):
-		group = frappe.get_all("Item Group", filters={"is_group": 0}, pluck="name", limit=1)[0]
+	group = "Products" if frappe.db.exists("Item Group", "Products") else frappe.get_all(
+		"Item Group", filters={"is_group": 0}, pluck="name", limit=1
+	)[0]
 	frappe.get_doc(
 		{
 			"doctype": "Item",
@@ -204,16 +148,15 @@ def _ensure_item(code, name):
 
 
 def _ensure_boq(project_key):
-	existing = frappe.db.get_value("Fuse BOQ", {"project_key": project_key}, "name")
+	existing = frappe.db.get_value("Fuse BOQ", {"project_key": project_key}, "name", order_by="creation desc")
 	if existing:
 		return existing
 
-	customer = frappe.db.get_value("Customer", {"customer_name": CLIENT[1]}, "name")
 	boq = frappe.new_doc("Fuse BOQ")
 	boq.title = "Demo 5 MW PV Plant"
 	boq.project_key = project_key
 	boq.contract_model = "EPC"
-	boq.customer = customer
+	boq.customer = frappe.db.get_value("Customer", {"customer_name": CLIENT}, "name")
 	boq.start_date = nowdate()
 	boq.end_date = add_months(nowdate(), 9)
 	boq.markup_percent = 15
@@ -232,4 +175,3 @@ def _ensure_boq(project_key):
 		boq.append("items", row)
 	boq.insert(ignore_permissions=True)
 	return boq.name
-

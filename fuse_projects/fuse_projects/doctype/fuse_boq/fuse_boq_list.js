@@ -1,5 +1,5 @@
 // The NSE demo loader sits on the BOQ list, for the person setting the demo profile up.
-// System Manager only: it writes vendors and a customer into the connected Intacct company.
+// System Manager only. Everything it makes stays in Fuse.
 
 frappe.listview_settings["Fuse BOQ"] = {
 	onload(listview) {
@@ -9,11 +9,10 @@ frappe.listview_settings["Fuse BOQ"] = {
 				[
 					{
 						fieldname: "project_key",
-						label: __("Intacct Project ID"),
+						label: __("Project Code"),
 						fieldtype: "Data",
 						default: "NSE-DEMO-5MW",
 						reqd: 1,
-						description: __("Use a fresh key for a rehearsal, e.g. NSE-REH-01."),
 					},
 				],
 				(values) =>

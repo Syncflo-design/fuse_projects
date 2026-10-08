@@ -16,8 +16,8 @@ class FuseBOQ(Document):
 
 		self._price()
 
-		# Once awarded, Intacct holds the budget and the key. Changing either here would leave
-		# the two disagreeing about what the job is worth or what it is called.
+		# Once awarded, the BOQ is the budget the cost report measures against. Changing the
+		# price or the code afterwards would move the baseline under figures already reported.
 		if self.status == "Awarded" and not self.flags.awarding:
 			before = self.get_doc_before_save()
 			if before and (
@@ -25,7 +25,7 @@ class FuseBOQ(Document):
 				or flt(before.contract_value, 2) != flt(self.contract_value, 2)
 				or before.project_key != self.project_key
 			):
-				frappe.throw("This BOQ is awarded. Its price and key are held in Intacct and cannot change here.")
+				frappe.throw("This BOQ is awarded. Its price and code are the job's budget and cannot change.")
 
 	def _price(self):
 		for row in self.items:

@@ -1,18 +1,15 @@
 """Budget, committed, actual and earned value per BOQ section — the Power BI page, in Fuse.
 
-Budget is the awarded BOQ. Committed is purchase orders not yet received. Actual is what has
-been certified to Intacct as AP bills plus goods received. Percent complete is the task's
-progress, which a client valuation sets (and the site team can move on the phone screen), and
-earned value is budget times that percent.
+Budget is the awarded BOQ. Committed is purchase orders not yet received. Actual is what
+subcontractors have been certified for, less contra-charges, plus goods received. Percent
+complete is the task's progress, which a client valuation sets (and the site team can move on
+the phone screen), and earned value is budget times that percent.
 
-The project's totals in Intacct are read live, so the page always shows whether Fuse and the
-ledger agree.
+Everything here is Fuse's own data.
 """
 
 import frappe
 from frappe.utils import flt
-
-from fuse_projects import commercial
 
 
 def execute(filters=None):
@@ -108,7 +105,7 @@ def _purchase_orders(project):
 
 
 def _certificates(project):
-	"""Cost certified to Intacct per section (gross less contra), and retention held."""
+	"""Cost certified per section (gross less contra), and retention held."""
 	certified, retention = {}, 0.0
 	for cert in frappe.get_all(
 		"Fuse Subcontract Certificate",
@@ -179,38 +176,4 @@ def _summary(boq, total, retention_held):
 		{"label": "Subcontract Retention Held", "value": retention_held, "datatype": "Currency", "indicator": "Grey"},
 	]
 
-	try:
-		live = commercial.intacct_project_totals(boq.project_key)
-	except Exception:
-		# The dialog the failed read queued; the card below says it instead.
-		commercial.forget_last_message()
-		cards.append({"label": "Intacct", "value": "Not reachable", "datatype": "Data", "indicator": "Red"})
-		return cards
-
-	certified = sum(
-		flt(cert.gross_value) - flt(cert.contra_charges)
-		for cert in frappe.get_all(
-			"Fuse Subcontract Certificate",
-			filters={"project": boq.project, "docstatus": 1},
-			fields=["gross_value", "contra_charges"],
-		)
-	)
-	cards.append(
-		{
-			"label": "Project Cost in Intacct (live)",
-			"value": live["cost"],
-			"datatype": "Currency",
-			# Green when every rand certified here is in the ledger. Intacct may hold more —
-			# invoices keyed straight into AP against the project — which is not a mismatch.
-			"indicator": "Green" if live["cost"] >= flt(certified, 2) else "Red",
-		}
-	)
-	cards.append(
-		{
-			"label": "Billed in Intacct (live)",
-			"value": live["billed"],
-			"datatype": "Currency",
-			"indicator": "Green" if flt(live["billed"], 2) == valued else "Orange",
-		}
-	)
 	return cards

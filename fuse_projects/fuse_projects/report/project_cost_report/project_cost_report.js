@@ -6,7 +6,6 @@ frappe.query_reports["Project Cost Report"] = {
 			fieldtype: "Link",
 			options: "Project",
 			reqd: 1,
-			get_query: () => ({ filters: { custom_intacct_project_id: ["is", "set"] } }),
 		},
 	],
 

@@ -13,7 +13,7 @@ frappe.ui.form.on("Fuse BOQ", {
 		if (frm.is_new()) return;
 
 		if (!awarded) {
-			frm.add_custom_button(__("Award to Intacct"), () => award(frm)).addClass("btn-primary");
+			frm.add_custom_button(__("Award"), () => award(frm)).addClass("btn-primary");
 			return;
 		}
 
@@ -75,27 +75,18 @@ function award(frm) {
 	const sections = [...new Set((frm.doc.items || []).map((row) => row.section).filter(Boolean))];
 	frappe.confirm(
 		__(
-			"Open <b>{0}</b> in Intacct as project <b>{1}</b>, with {2} tasks and a projected cost of {3}?",
-			[
-				frappe.utils.escape_html(frm.doc.title),
-				frappe.utils.escape_html(frm.doc.project_key),
-				sections.length,
-				format_currency(frm.doc.total_cost),
-			]
+			"Award <b>{0}</b>? The project opens with {1} tasks, one per section, and a budget of {2}. The price then locks.",
+			[frappe.utils.escape_html(frm.doc.title), sections.length, format_currency(frm.doc.total_cost)]
 		),
 		() =>
 			frappe.call({
 				method: "fuse_projects.commercial.award_boq",
 				args: { boq: frm.doc.name },
 				freeze: true,
-				freeze_message: __("Opening the project in Intacct..."),
 				callback(r) {
 					if (!r.message) return;
 					frappe.show_alert({
-						message: __("Project {0} is open in Intacct with {1} tasks.", [
-							r.message.project_id,
-							r.message.tasks,
-						]),
+						message: __("Project {0} is open with {1} tasks.", [r.message.project, r.message.tasks]),
 						indicator: "green",
 					});
 					frm.reload_doc();
