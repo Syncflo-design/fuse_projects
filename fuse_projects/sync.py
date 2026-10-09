@@ -68,9 +68,20 @@ def _company(company=None):
 	if len(companies) == 1:
 		return companies[0]
 
+	# Several companies, as on a demo site that runs a construction company beside the
+	# manufacturing one. Mirrored projects belong to the one Intacct posts into — the only
+	# company carrying an Intacct entity.
+	# The field comes with fuse_manufacturing, which this app does not require.
+	if frappe.get_meta("Company").has_field("custom_intacct_entity_id"):
+		connected = frappe.get_all(
+			"Company", filters={"custom_intacct_entity_id": ["is", "set"]}, pluck="name", limit=2
+		)
+		if len(connected) == 1:
+			return connected[0]
+
 	frappe.throw(
 		"This site has more than one Company, so the sync cannot tell which one a mirrored "
-		"project belongs to. Pass company=... explicitly."
+		"project belongs to. Set the Intacct Entity ID on exactly one, or pass company=... explicitly."
 	)
 
 
