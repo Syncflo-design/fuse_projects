@@ -6,28 +6,12 @@
 // actually connected. A site with no Intacct connection has nowhere else to open a project,
 // so nothing is hidden there — which is also why this leaves a demo alone.
 //
-// The settings are read once and cached on frappe.boot, because both the form and the list
-// need them and neither should cost a round trip on every render.
+// The answer comes from the server on frappe.boot (boot.py). Reading Intacct Settings from
+// here needs a permission most logins do not have, and Frappe showed the refusal as an
+// error on every Project list before any catch could hide it.
 
 function fuse_projects_locked(then) {
-	if (frappe.boot.fuse_projects_from_intacct !== undefined) {
-		then(frappe.boot.fuse_projects_from_intacct);
-		return;
-	}
-	Promise.all([
-		frappe.db.get_single_value("Intacct Settings", "enabled"),
-		frappe.db.get_single_value("Intacct Settings", "projects_from_intacct")
-	])
-		.then(function (values) {
-			frappe.boot.fuse_projects_from_intacct = !!(values[0] && values[1]);
-			then(frappe.boot.fuse_projects_from_intacct);
-		})
-		.catch(function () {
-			// No settings, or no permission to read them: leave ERPNext as it is rather than
-			// hiding a button on a guess.
-			frappe.boot.fuse_projects_from_intacct = false;
-			then(false);
-		});
+	then(!!frappe.boot.fuse_projects_from_intacct);
 }
 
 frappe.ui.form.on("Project", {

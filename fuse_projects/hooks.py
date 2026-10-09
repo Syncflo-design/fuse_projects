@@ -17,6 +17,10 @@ required_apps = ["fuse_core"]
 after_install = "fuse_projects.install.after_install"
 after_migrate = "fuse_projects.install.after_install"
 
+# Whether Intacct owns projects here, for project_locked.js. Worked out on the server so a
+# login without access to Intacct Settings is not shown a permission error. See boot.py.
+extend_bootinfo = "fuse_projects.boot.extend"
+
 # How this app reaches Fuse Home. Each entry is a dotted path to a callable returning a
 # list of dicts: fuse_manufacturing reads the first (it owns the switches, under Active
 # Modules in Intacct Settings) and fuse_theme reads the second (it draws the tiles).
